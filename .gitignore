@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+*.pyo
+
+# Poetry & venv
+poetry.lock
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test/coverage
+htmlcov/
+.tox/
+.coverage
+*.cover
+.cache
+.pytest_cache/
+.coverage.*
+
+# ChromaDB & persistent data
+chroma_db/
+data/
