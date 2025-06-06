@@ -1,0 +1,14 @@
+services:
+  edu-guard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edu_guard_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+    env_file:
+      - .env
+    restart: unless-stopped
