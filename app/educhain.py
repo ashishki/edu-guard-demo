@@ -1,31 +1,40 @@
 """
-EduChain — main orchestrator class.
-Combines guardrails, document retrieval, and LLM answer into a single pipeline.
+EduChain (LangChain version)
+----------------------------
+Pipeline: Guardrails → Retriever → MultiLLM → Results
 """
 
 from dataclasses import dataclass
 
 @dataclass
-class EduChainResult:
+class EduChainMultiResult:
     context: str
-    answer: str
+    answers: dict   # {"model_name": "answer"}
 
 class EduChain:
-    def __init__(self, guardrails, indexer, llm_client):
+    def __init__(self, guardrails, indexer, llm_clients: dict):
         self.guardrails = guardrails
         self.indexer = indexer
-        self.llm_client = llm_client
+        self.llm_clients = llm_clients  # {"openai": llm, "together": llm, ...}
 
-    async def process(self, prompt: str) -> EduChainResult:
+    async def process(self, prompt: str) -> EduChainMultiResult:
         """
-        1. Moderates the prompt.
-        2. If allowed, retrieves context.
-        3. Passes prompt + context to LLM.
-        4. Returns EduChainResult (context + answer).
+        1. Moderates prompt.
+        2. Retrieves context.
+        3. Asks all LLMs in parallel.
         """
         moderation = await self.guardrails.moderate(prompt)
         if not moderation.is_safe:
             raise ValueError(f"Blocked by guardrails: {moderation.reason}")
+
         context = await self.indexer.retrieve(prompt)
-        llm_result = await self.llm_client.ask(prompt, context=context)
-        return EduChainResult(context=context, answer=llm_result.answer)
+        
+        # Query all LLMs in parallel, passing context
+        import asyncio
+        async def ask_llm(name, client):
+            result = await client.ask(prompt, context=context)
+            return (name, result.answer)
+        answers = dict(await asyncio.gather(
+            *(ask_llm(name, client) for name, client in self.llm_clients.items())
+        ))
+        return EduChainMultiResult(context=context, answers=answers)
